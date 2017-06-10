@@ -4,12 +4,13 @@ import sys
 import tempfile
 from subprocess import Popen, PIPE
 
+KEYSERVER = 'hkps://hkps.pool.sks-keyservers.net'  # TODO take also as command line option
 KEY_REGEX = re.compile(r'^gpg: key (0x[0-9a-fA-F]{16}): ')
 
-
 # search for key on keyserver
-process = Popen(['gpg', '--keyid-format', '0xlong', '--search-keys', sys.argv[1]], stderr=PIPE,
-                universal_newlines=True)
+process = Popen(
+    ['gpg', '--keyid-format', '0xlong', '--keyserver', KEYSERVER, '--search-keys', sys.argv[1]],
+    stderr=PIPE, universal_newlines=True)
 process.wait()
 
 # find key ID in output
