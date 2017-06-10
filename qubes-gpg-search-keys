@@ -1,0 +1,37 @@
+#!/usr/bin/env python3
+import re
+import sys
+import tempfile
+from subprocess import Popen, PIPE
+
+KEY_REGEX = re.compile(r'^gpg: key (0x[0-9a-fA-F]{16}): ')
+
+
+# search for key on keyserver
+process = Popen(['gpg', '--keyid-format', '0xlong', '--search-keys', sys.argv[1]], stderr=PIPE,
+                universal_newlines=True)
+process.wait()
+
+# find key ID in output
+keyid = None
+for line in process.stderr.readlines():
+    match = KEY_REGEX.match(line)
+    if match:
+        keyid = match.group(1)
+if keyid is None:
+    print("Key not found :(")
+    sys.exit(1)
+
+# export key and import it into vault VM
+process = Popen(['gpg', '--export', keyid], stdout=PIPE)
+with tempfile.NamedTemporaryFile() as fp:
+    for line in process.stdout:
+        fp.write(line)
+    fp.seek(0)
+    print("Importing Key %s..." % keyid)
+    process = Popen(['qubes-gpg-import-key', fp.name])
+    process.wait()
+
+# delete key from keyring
+process = Popen(['gpg', '--delete-keys', keyid])
+process.wait()
